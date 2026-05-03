@@ -1,0 +1,89 @@
+#!/usr/bin/env php
+<?php
+// Scan all workspaces and auto-register the most recent 5 undiscovered sessions per workspace.
+// Self-reported labels always take priority -- this just fills in GUIDs and timestamps.
+// Extracts first user message from JSONL as an auto-label when no label exists.
+
+require_once __DIR__ . '/../src/Database.php';
+Database::init();
+
+function extractFirstUserMessage(string $jsonlPath): ?string
+{
+    $fh = fopen($jsonlPath, 'r');
+    if (!$fh) return null;
+
+    $bytes = 0;
+    $maxBytes = 50000;
+    while (($line = fgets($fh)) !== false && $bytes < $maxBytes) {
+        $bytes += strlen($line);
+        $line = trim($line);
+        if (!$line) continue;
+
+        $obj = @json_decode($line, true);
+        if (!$obj) continue;
+
+        if (($obj['type'] ?? '') !== 'user') continue;
+
+        $msg = $obj['message'] ?? null;
+        if (!$msg) continue;
+
+        if (is_string($msg)) {
+            $msg = @json_decode($msg, true);
+        }
+
+        $content = $msg['content'] ?? null;
+        if (is_string($content)) {
+            fclose($fh);
+            $snippet = trim(preg_replace('/\s+/', ' ', $content));
+            return mb_strlen($snippet) > 80 ? mb_substr($snippet, 0, 77) . '...' : $snippet;
+        }
+        if (is_array($content)) {
+            foreach ($content as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'text' && !empty($block['text'])) {
+                    fclose($fh);
+                    $snippet = trim(preg_replace('/\s+/', ' ', $block['text']));
+                    return mb_strlen($snippet) > 80 ? mb_substr($snippet, 0, 77) . '...' : $snippet;
+                }
+            }
+        }
+    }
+
+    fclose($fh);
+    return null;
+}
+
+$pdo = Database::connect();
+$workspaces = $pdo->query('SELECT id, path FROM workspaces ORDER BY path')->fetchAll();
+
+$claudeDir = getenv('HOME') ?: '/home/' . get_current_user();
+
+$total = 0;
+foreach ($workspaces as $ws) {
+    $discovered = Database::discoverSessions($ws['path'], $ws['id'], 5);
+    $sessions = $discovered['sessions'] ?? [];
+
+    foreach ($sessions as $s) {
+        $encoded = str_replace('/', '-', $ws['path']);
+        $jsonlPath = $claudeDir . '/.claude/projects/' . $encoded . '/' . $s['guid'] . '.jsonl';
+
+        $label = null;
+        if (file_exists($jsonlPath)) {
+            $label = extractFirstUserMessage($jsonlPath);
+        }
+
+        try {
+            Database::createSession($ws['id'], $s['guid'], $label, 'paused', $s['last_active_at']);
+            $display = $label ? "\"$label\"" : $s['guid'];
+            echo "  Registered: $display ({$s['age_days']}d ago, {$s['size_kb']}kb) -> {$ws['path']}\n";
+            $total++;
+        } catch (PDOException $e) {
+            // already registered
+        }
+    }
+}
+
+if ($total === 0) {
+    echo "All recent sessions already registered.\n";
+} else {
+    echo "\nRegistered $total sessions. Use /label or the dashboard to name them.\n";
+}

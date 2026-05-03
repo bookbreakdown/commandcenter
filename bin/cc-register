@@ -1,0 +1,73 @@
+#!/usr/bin/env php
+<?php
+// Command Center session registration.
+// Called from ANY workspace. Do not require or load anything from that workspace.
+// Usage:
+//   cc-register --workspace /var/www/openshelf --guid <GUID> --label "CLIENT | task desc"
+//   cc-register --workspace /var/www/openshelf --guid <GUID>   (registers unlabeled)
+//   cc-register --label "CLIENT | task desc" --guid <GUID>     (labels existing session)
+//   cc-register --workspace /var/www/openshelf --status paused --guid <GUID>
+
+require_once __DIR__ . '/../src/Database.php';
+Database::init();
+
+$opts = getopt('', ['workspace:', 'guid:', 'label:', 'status:']);
+
+$guid = $opts['guid'] ?? null;
+$workspace = $opts['workspace'] ?? null;
+$label = $opts['label'] ?? null;
+$status = $opts['status'] ?? null;
+
+if (!$guid) {
+    fwrite(STDERR, "Error: --guid is required\n");
+    exit(1);
+}
+
+$pdo = Database::connect();
+
+// Check if session already exists
+$stmt = $pdo->prepare('SELECT id FROM sessions WHERE guid = ?');
+$stmt->execute([$guid]);
+$existing = $stmt->fetchColumn();
+
+if ($existing) {
+    // Update existing session
+    if ($label) {
+        Database::updateSessionLabel($guid, $label);
+        echo "Session $guid labeled: $label\n";
+    }
+    if ($status) {
+        Database::updateSessionStatus($guid, $status);
+        echo "Session $guid status: $status\n";
+    }
+    if (!$label && !$status) {
+        Database::touchSession($guid);
+        echo "Session $guid touched.\n";
+    }
+} else {
+    // New session -- need workspace
+    if (!$workspace) {
+        fwrite(STDERR, "Error: --workspace is required for new sessions\n");
+        exit(1);
+    }
+
+    // Find workspace ID
+    $stmt = $pdo->prepare('SELECT id FROM workspaces WHERE path = ?');
+    $stmt->execute([$workspace]);
+    $wsId = $stmt->fetchColumn();
+
+    if (!$wsId) {
+        fwrite(STDERR, "Error: workspace '$workspace' not found in command center.\n");
+        fwrite(STDERR, "Register it first via the dashboard or API.\n");
+        exit(1);
+    }
+
+    Database::createSession($wsId, $guid, $label);
+    echo "Session $guid registered";
+    if ($label) echo " as: $label";
+    echo "\n";
+
+    if ($status && $status !== 'active') {
+        Database::updateSessionStatus($guid, $status);
+    }
+}
