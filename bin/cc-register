@@ -3,10 +3,10 @@
 // Command Center session registration.
 // Called from ANY workspace. Do not require or load anything from that workspace.
 // Usage:
-//   cc-register --workspace /var/www/openshelf --guid <GUID> --label "CLIENT | task desc"
-//   cc-register --workspace /var/www/openshelf --guid <GUID>   (registers unlabeled)
-//   cc-register --label "CLIENT | task desc" --guid <GUID>     (labels existing session)
-//   cc-register --workspace /var/www/openshelf --status paused --guid <GUID>
+//   cc-register --label "PROJECT | task desc"                   (auto-detects GUID + workspace)
+//   cc-register --workspace /var/www/foo --guid <GUID> --label "PROJECT | task desc"
+//   cc-register --guid <GUID>                                   (registers unlabeled)
+//   cc-register --status paused --guid <GUID>
 
 require_once __DIR__ . '/../src/Database.php';
 Database::init();
@@ -19,8 +19,28 @@ $label = $opts['label'] ?? null;
 $status = $opts['status'] ?? null;
 
 if (!$guid) {
-    fwrite(STDERR, "Error: --guid is required\n");
-    exit(1);
+    $cwd = $workspace ?: getcwd();
+    $home = getenv('HOME') ?: '/home/' . get_current_user();
+    $encoded = str_replace('/', '-', $cwd);
+    $projectDir = $home . '/.claude/projects/' . $encoded;
+
+    if (is_dir($projectDir)) {
+        $files = glob($projectDir . '/*.jsonl');
+        if ($files) {
+            usort($files, fn($a, $b) => filemtime($b) - filemtime($a));
+            $guid = basename($files[0], '.jsonl');
+            fwrite(STDERR, "Auto-detected GUID: $guid\n");
+        }
+    }
+
+    if (!$guid) {
+        fwrite(STDERR, "Error: --guid is required (auto-detection failed)\n");
+        exit(1);
+    }
+}
+
+if (!$workspace) {
+    $workspace = getcwd();
 }
 
 $pdo = Database::connect();

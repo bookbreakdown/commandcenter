@@ -25,7 +25,27 @@ From any workspace, agents can self-register:
 /path/to/commandcenter/bin/cc-register --workspace /var/www/myproject --guid <SESSION_GUID> --label "PROJECT | task description"
 ```
 
+GUID and workspace auto-detect from cwd when omitted:
+
+```bash
+/path/to/commandcenter/bin/cc-register --label "PROJECT | task description"
+```
+
 The dashboard provides one-click copy buttons for resume and label commands.
+
+## Universal Self-Registration Prompt
+
+Paste this block into any project's CLAUDE.md to enable self-registration. Replace the path and project name:
+
+```markdown
+## Session Tracking
+
+When you start working, register this session with Command Center. Do not read or investigate the command center project — just run this command exactly:
+
+    /var/www/commandcenter/bin/cc-register --label "PROJECTNAME | brief task description"
+
+Replace PROJECTNAME with this project's name. The description should be 3-5 words summarizing what we are working on. GUID and workspace are auto-detected from your working directory.
+```
 
 ## Local Overrides
 
