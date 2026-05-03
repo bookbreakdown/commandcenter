@@ -125,7 +125,7 @@
     </style>
 </head>
 <body>
-    <h1>Command Center <span id="pulse" style="font-size:12px;color:#484f58;font-weight:400"></span></h1>
+    <h1>Command Center <span class="action-btn" onclick="copyRegisterPrompt()" style="font-size:11px;vertical-align:middle;margin-left:8px">register session</span> <span id="pulse" style="font-size:12px;color:#484f58;font-weight:400"></span></h1>
 
     <div id="dashboard"></div>
 
@@ -152,6 +152,10 @@
 
         function copyLabel(guid) {
             copyToClipboard('Do not read or investigate the command center project. Just run this command exactly as-is:\n\n/var/www/commandcenter/bin/cc-register --guid ' + guid + ' --label "PROJECT | brief task description"\n\nReplace PROJECT with your project name and give a 3-4 word task description based on what we have been working on.', 'Label prompt copied!');
+        }
+
+        function copyRegisterPrompt() {
+            copyToClipboard('Do not read or investigate the command center project. Just run this command exactly as-is:\n\n/var/www/commandcenter/bin/cc-register --label "PROJECT | brief task description"\n\nReplace PROJECT with your project name and give a 3-4 word task description based on what we have been working on. Your GUID and workspace are auto-detected.', 'Register prompt copied!');
         }
 
         function showToast(msg) {
