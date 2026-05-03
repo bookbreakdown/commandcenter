@@ -227,7 +227,6 @@
                             } else {
                                 html += '<span class="session-unlabeled">' + s.guid.substring(0, 8) + '...</span>';
                             }
-                            html += '<span class="action-btn" onclick="copyLabel(\'' + s.guid + '\')">label</span>';
                             html += '<span class="action-btn" onclick="copyResume(\'' + s.guid + '\')">resume</span>';
                             html += '<span class="time-ago">' + timeAgo(s.last_active_at) + '</span>';
                             html += '</li>';
@@ -243,7 +242,6 @@
                                 html += '<span class="' + ageClass + '">' + (d.age_days < 1 ? 'today' : d.age_days + 'd ago') + '</span>';
                                 html += '<span class="session-unlabeled">' + d.guid.substring(0, 8) + '...</span>';
                                 html += '<span style="color:#484f58;font-size:11px">' + d.size_kb + 'kb</span>';
-                                html += '<span class="action-btn" onclick="copyLabel(\'' + d.guid + '\')">label</span>';
                                 html += '<span class="action-btn" onclick="copyResume(\'' + d.guid + '\')">resume</span>';
                                 html += '</li>';
                             }
