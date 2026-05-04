@@ -107,9 +107,15 @@ export function Dashboard() {
                             {a.label.toUpperCase()}{a.is_default ? ' • default' : ''}
                         </Badge>
                     ))}
-                    <Button size="sm" variant="outline" onClick={copyRegisterPrompt} disabled={!data}>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={copyRegisterPrompt}
+                        disabled={!data}
+                        className={copied ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-50' : undefined}
+                    >
                         {copied ? <Check className="h-3.5 w-3.5" /> : <ClipboardCopy className="h-3.5 w-3.5" />}
-                        {copied ? 'Copied' : 'Copy register prompt'}
+                        {copied ? 'Copied to clipboard' : 'Copy register prompt'}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={expandAll} disabled={!data}>Expand all</Button>
                     <Button size="sm" variant="ghost" onClick={collapseAll} disabled={!data}>Collapse all</Button>

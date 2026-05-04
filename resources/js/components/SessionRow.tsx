@@ -1,4 +1,4 @@
-import { Copy, Pause, CheckCircle2, Play, X } from 'lucide-react';
+import { Copy, Pause, CheckCircle2, Play, X, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { patchSession, type SessionRow as SessionT } from '@/lib/api';
@@ -22,12 +22,17 @@ const statusVariant = (s: SessionT['status']): 'active' | 'paused' | 'done' => s
 
 export function SessionRow({ session, onChanged, dismissable = false }: Props) {
     const [busy, setBusy] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     const copyResume = async () => {
         // Include --dangerously-skip-permissions so the resumed session lands
         // in the same permission mode it ran in originally (this user's
         // workflow always runs Claude that way).
-        await copyToClipboard(`claude --dangerously-skip-permissions --resume ${session.guid}`);
+        const ok = await copyToClipboard(`claude --dangerously-skip-permissions --resume ${session.guid}`);
+        if (ok) {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+        }
     };
 
     const setStatus = async (status: SessionT['status']) => {
@@ -74,8 +79,15 @@ export function SessionRow({ session, onChanged, dismissable = false }: Props) {
                 <td className="px-3 py-2 text-xs text-zinc-500">{relativeTime(session.last_active_at)}</td>
                 <td className="px-3 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
-                        <Button size="xs" variant="ghost" onClick={copyResume} title="Copy resume command">
-                            <Copy className="h-3.5 w-3.5" />
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={copyResume}
+                            title="Copy resume command"
+                            className={copied ? 'bg-green-100 text-green-700' : undefined}
+                        >
+                            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                            {copied ? <span className="text-[11px]">copied</span> : null}
                         </Button>
                         {session.status !== 'paused' && (
                             <Button size="xs" variant="ghost" disabled={busy} onClick={() => setStatus('paused')} title="Mark paused">
