@@ -14,6 +14,7 @@ class Session extends Model
         'account_id',
         'workspace_id',
         'label',
+        'first_user_prompt',
         'status',
         'jsonl_path',
         'jsonl_size_bytes',

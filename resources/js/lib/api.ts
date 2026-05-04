@@ -11,6 +11,7 @@ export type SessionRow = {
     guid_short: string;
     account: { id: number; label: string; is_default: boolean } | null;
     label: string | null;
+    first_user_prompt: string | null;
     status: 'active' | 'paused' | 'done';
     jsonl_size_kb: number | null;
     jsonl_mtime: string | null;
@@ -34,6 +35,8 @@ export type DashboardPayload = {
     projects: ProjectNode[];
     orphans: SessionRow[];
     accounts: Account[];
+    register_prompt: string;
+    commandcenter_home: string;
 };
 
 export async function fetchDashboard(): Promise<DashboardPayload> {

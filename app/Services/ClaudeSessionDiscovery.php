@@ -82,6 +82,51 @@ class ClaudeSessionDiscovery
             $session->registered = false;
         }
 
+        // Cache the first user prompt the first time we see a file. Re-extract
+        // when the file grows or the column is empty (cheap recovery if a row
+        // predates this feature).
+        $shouldExtract = empty($session->first_user_prompt)
+            || $session->jsonl_size_bytes !== $size;
+        if ($shouldExtract) {
+            $session->first_user_prompt = $this->extractFirstUserPrompt($jsonlPath);
+        }
+
         return $session->save();
+    }
+
+    /**
+     * Read the JSONL line-by-line until the first message that is a plain
+     * human prompt (type=user, role=user, content is a string -- this skips
+     * system-injected tool-result messages which use an array). Truncates to
+     * 280 chars so the column stays tweet-sized for the dashboard preview.
+     */
+    private function extractFirstUserPrompt(string $jsonlPath): ?string
+    {
+        $fh = @fopen($jsonlPath, 'r');
+        if (!$fh) return null;
+
+        try {
+            $linesScanned = 0;
+            while (($line = fgets($fh)) !== false) {
+                if (++$linesScanned > 200) break; // first prompt is always near the top
+                $line = trim($line);
+                if ($line === '' || $line[0] !== '{') continue;
+
+                $obj = json_decode($line, true);
+                if (!is_array($obj)) continue;
+                if (($obj['type'] ?? null) !== 'user') continue;
+
+                $content = $obj['message']['content'] ?? null;
+                if (!is_string($content) || $content === '') continue;
+
+                $clean = trim(preg_replace('/\s+/', ' ', $content) ?? '');
+                if ($clean === '') continue;
+
+                return mb_substr($clean, 0, 280);
+            }
+            return null;
+        } finally {
+            fclose($fh);
+        }
     }
 }

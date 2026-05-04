@@ -4,10 +4,12 @@ import type { ProjectNode } from '@/lib/api';
 
 type Props = {
     project: ProjectNode;
+    expandedSet: Set<number>;
+    onToggleWorkspace: (id: number) => void;
     onChanged: () => void;
 };
 
-export function ProjectCard({ project, onChanged }: Props) {
+export function ProjectCard({ project, expandedSet, onToggleWorkspace, onChanged }: Props) {
     return (
         <Card>
             <CardHeader>
@@ -23,7 +25,13 @@ export function ProjectCard({ project, onChanged }: Props) {
                     <div className="px-4 py-3 text-sm italic text-zinc-400">No workspaces.</div>
                 ) : (
                     project.workspaces.map((ws) => (
-                        <WorkspaceTable key={ws.id} workspace={ws} onChanged={onChanged} />
+                        <WorkspaceTable
+                            key={ws.id}
+                            workspace={ws}
+                            expanded={expandedSet.has(ws.id)}
+                            onToggle={() => onToggleWorkspace(ws.id)}
+                            onChanged={onChanged}
+                        />
                     ))
                 )}
             </div>

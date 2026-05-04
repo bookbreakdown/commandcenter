@@ -84,6 +84,7 @@ class DashboardService
                 'is_default' => (bool) $account->is_default,
             ] : null,
             'label'          => $s->label,
+            'first_user_prompt' => $s->first_user_prompt,
             'status'         => $s->status,
             'jsonl_size_kb'  => $s->jsonl_size_bytes ? (int) round($s->jsonl_size_bytes / 1024) : null,
             'jsonl_mtime'    => optional($s->jsonl_mtime)->toIso8601String(),
