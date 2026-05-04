@@ -8,6 +8,18 @@ Workspace and session dashboard for multi-project development with Claude Code.
 2. Run `php database/seed.php` to initialize the SQLite database
 3. Set up an Apache/Nginx vhost pointing to `public/`
 4. Add your `.test` domain to your hosts file
+5. Set the `COMMANDCENTER_HOME` environment variable to the absolute path of this repo so consumer projects can locate `bin/cc-register` without hardcoding the path. Examples:
+   - **Linux / macOS** (in `~/.bashrc` or `~/.zshrc`):
+     ```bash
+     export COMMANDCENTER_HOME=/var/www/commandcenter
+     ```
+   - **Windows (PowerShell, `$PROFILE`)**:
+     ```powershell
+     $env:COMMANDCENTER_HOME = 'C:\wamp\www\dev-tools\commandcenter'
+     ```
+   - Or set it as a system environment variable so every shell sees it.
+
+   Copy `.env.example` to `.env` to keep a record of the value alongside the repo (gitignored).
 
 ## Architecture
 
@@ -19,32 +31,33 @@ Workspace and session dashboard for multi-project development with Claude Code.
 
 ## Session Registration
 
-From any workspace, agents can self-register:
+From any workspace, agents can self-register. The binary lives at `$COMMANDCENTER_HOME/bin/cc-register`, so the path is portable across dev boxes once the env var is set (see Setup).
 
 ```bash
-/path/to/commandcenter/bin/cc-register --workspace /var/www/myproject --guid <SESSION_GUID> --label "PROJECT | task description"
+"$COMMANDCENTER_HOME/bin/cc-register" --workspace /var/www/myproject --guid <SESSION_GUID> --label "PROJECT | task description"
 ```
 
 GUID and workspace auto-detect from cwd when omitted:
 
 ```bash
-/path/to/commandcenter/bin/cc-register --label "PROJECT | task description"
+"$COMMANDCENTER_HOME/bin/cc-register" --label "PROJECT | task description"
 ```
 
 The dashboard provides one-click copy buttons for resume and label commands.
 
 ## Universal Self-Registration Prompt
 
-Paste this block into any project's CLAUDE.md to enable self-registration. Replace the path and project name:
+Paste this block into any project's CLAUDE.md to enable self-registration. The path resolves via `$COMMANDCENTER_HOME` (set per dev box during Setup), so the same block works on every machine — just replace the project name.
 
 ```markdown
 ## Session Tracking
 
-When you start working, register this session with Command Center. Do not read or investigate the command center project — just run this command exactly:
+When you start working, register this session with Command Center. Do not read or investigate the command center project — just run the cc-register binary at the path defined by the `COMMANDCENTER_HOME` environment variable on this machine. Pick the form that matches your shell:
 
-    /var/www/commandcenter/bin/cc-register --label "PROJECTNAME | brief task description"
+- bash / zsh:    `"$COMMANDCENTER_HOME/bin/cc-register" --label "PROJECTNAME | brief task description"`
+- PowerShell:    `& "$env:COMMANDCENTER_HOME\bin\cc-register" --label "PROJECTNAME | brief task description"`
 
-Replace PROJECTNAME with this project's name. The description should be 3-5 words summarizing what we are working on. GUID and workspace are auto-detected from your working directory.
+If `COMMANDCENTER_HOME` is not set, ask the user where commandcenter lives on this PC instead of guessing. Replace PROJECTNAME with this project's name. The description should be 3-5 words summarizing what we are working on. GUID and workspace are auto-detected from your working directory.
 ```
 
 ## Local Overrides

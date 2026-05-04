@@ -11,6 +11,7 @@ CLAUDE.local.md
 knowledge/
 deployments.log
 handoff-*.md
+.env
 
 # Temp files
 trello.zip
