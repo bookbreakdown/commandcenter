@@ -1,21 +1,26 @@
-# SQLite database (PC-specific data)
-database/*.db
-database/*.db-shm
-database/*.db-wal
-
-# PC-specific seed (use seed.example.php as template)
-database/seed.php
-
-# PC-specific overrides
-CLAUDE.local.md
-knowledge/
-deployments.log
-handoff-*.md
-
-# Temp files
-trello.zip
-*.swp
-*.swo
-
-# Apache vhost (each PC sets up their own)
-setup-vhost.sh
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+Thumbs.db

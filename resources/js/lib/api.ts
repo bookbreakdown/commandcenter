@@ -1,0 +1,78 @@
+export type Account = {
+    id: number;
+    label: string;
+    is_default: boolean;
+    claude_dir?: string;
+    executable: string;
+};
+
+export type SessionRow = {
+    id: number;
+    guid: string;
+    guid_short: string;
+    account: { id: number; label: string; is_default: boolean; executable: string } | null;
+    label: string | null;
+    first_user_prompt: string | null;
+    discovered_cwd: string | null;
+    status: 'active' | 'paused' | 'done';
+    jsonl_size_kb: number | null;
+    jsonl_mtime: string | null;
+    last_active_at: string | null;
+    registered: boolean;
+};
+
+export type OrphanGroup = {
+    cwd: string;
+    source: 'cwd' | 'encoded' | 'unknown';
+    sessions: SessionRow[];
+    latest_at: string | null;
+};
+
+export type WorkspaceRow = {
+    id: number;
+    path: string;
+    sessions: SessionRow[];
+};
+
+export type ProjectNode = {
+    id: number;
+    name: string;
+    workspaces: WorkspaceRow[];
+};
+
+export type DashboardPayload = {
+    projects: ProjectNode[];
+    orphans: OrphanGroup[];
+    accounts: Account[];
+    register_prompt: string;
+    commandcenter_home: string;
+};
+
+export async function fetchDashboard(): Promise<DashboardPayload> {
+    const res = await fetch('/api/dashboard', { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`Dashboard fetch failed: ${res.status}`);
+    return res.json();
+}
+
+export async function patchSession(
+    guid: string,
+    patch: Partial<Pick<SessionRow, 'label' | 'status'>> & { dismissed?: boolean }
+) {
+    const res = await fetch(`/api/sessions/${encodeURIComponent(guid)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(`Patch failed: ${res.status}`);
+    return res.json();
+}
+
+export async function dismissOrphanGroup(cwd: string): Promise<{ dismissed: number }> {
+    const res = await fetch('/api/orphans/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ cwd }),
+    });
+    if (!res.ok) throw new Error(`Dismiss group failed: ${res.status}`);
+    return res.json();
+}
