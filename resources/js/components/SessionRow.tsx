@@ -25,10 +25,12 @@ export function SessionRow({ session, onChanged, dismissable = false }: Props) {
     const [copied, setCopied] = useState(false);
 
     const copyResume = async () => {
-        // Include --dangerously-skip-permissions so the resumed session lands
-        // in the same permission mode it ran in originally (this user's
-        // workflow always runs Claude that way).
-        const ok = await copyToClipboard(`claude --dangerously-skip-permissions --resume ${session.guid}`);
+        // Use the per-account executable (e.g. `claude` for personal,
+        // `claude-savvior` for the savvior shell alias) plus
+        // --dangerously-skip-permissions so the resumed session lands in the
+        // same permission mode it ran in originally.
+        const exe = session.account?.executable ?? 'claude';
+        const ok = await copyToClipboard(`${exe} --dangerously-skip-permissions --resume ${session.guid}`);
         if (ok) {
             setCopied(true);
             window.setTimeout(() => setCopied(false), 1500);

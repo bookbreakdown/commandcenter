@@ -16,6 +16,10 @@ use Illuminate\Support\Collection;
  */
 class DashboardService
 {
+    public function __construct(
+        private readonly AccountExecutableResolver $execResolver,
+    ) {}
+
     public function tree(): array
     {
         $accounts = Account::all()->keyBy('id');
@@ -112,6 +116,13 @@ class DashboardService
         return Account::orderBy('is_default', 'desc')
             ->orderBy('label')
             ->get(['id', 'label', 'claude_dir', 'is_default'])
+            ->map(fn (Account $a) => [
+                'id'         => $a->id,
+                'label'      => $a->label,
+                'claude_dir' => $a->claude_dir,
+                'is_default' => (bool) $a->is_default,
+                'executable' => $this->execResolver->executableFor($a->label),
+            ])
             ->all();
     }
 
@@ -126,6 +137,7 @@ class DashboardService
                 'id'         => $account->id,
                 'label'      => $account->label,
                 'is_default' => (bool) $account->is_default,
+                'executable' => $this->execResolver->executableFor($account->label),
             ] : null,
             'label'          => $s->label,
             'first_user_prompt' => $s->first_user_prompt,

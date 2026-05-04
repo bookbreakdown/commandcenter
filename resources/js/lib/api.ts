@@ -3,13 +3,14 @@ export type Account = {
     label: string;
     is_default: boolean;
     claude_dir?: string;
+    executable: string;
 };
 
 export type SessionRow = {
     id: number;
     guid: string;
     guid_short: string;
-    account: { id: number; label: string; is_default: boolean } | null;
+    account: { id: number; label: string; is_default: boolean; executable: string } | null;
     label: string | null;
     first_user_prompt: string | null;
     discovered_cwd: string | null;
