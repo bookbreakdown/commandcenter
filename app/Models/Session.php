@@ -21,12 +21,14 @@ class Session extends Model
         'jsonl_size_bytes',
         'jsonl_mtime',
         'registered',
+        'dismissed_at',
     ];
 
     protected function casts(): array
     {
         return [
             'jsonl_mtime' => 'datetime',
+            'dismissed_at' => 'datetime',
             'registered' => 'boolean',
             'jsonl_size_bytes' => 'integer',
         ];

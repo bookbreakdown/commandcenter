@@ -53,12 +53,25 @@ export async function fetchDashboard(): Promise<DashboardPayload> {
     return res.json();
 }
 
-export async function patchSession(guid: string, patch: Partial<Pick<SessionRow, 'label' | 'status'>>) {
+export async function patchSession(
+    guid: string,
+    patch: Partial<Pick<SessionRow, 'label' | 'status'>> & { dismissed?: boolean }
+) {
     const res = await fetch(`/api/sessions/${encodeURIComponent(guid)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(patch),
     });
     if (!res.ok) throw new Error(`Patch failed: ${res.status}`);
+    return res.json();
+}
+
+export async function dismissOrphanGroup(cwd: string): Promise<{ dismissed: number }> {
+    const res = await fetch('/api/orphans/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ cwd }),
+    });
+    if (!res.ok) throw new Error(`Dismiss group failed: ${res.status}`);
     return res.json();
 }

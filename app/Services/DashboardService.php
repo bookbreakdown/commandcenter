@@ -59,6 +59,7 @@ class DashboardService
         $accounts = Account::all()->keyBy('id');
         $rows = Session::with('account')
             ->whereNull('workspace_id')
+            ->whereNull('dismissed_at')
             ->orderByDesc('jsonl_mtime')
             ->limit(200)
             ->get();

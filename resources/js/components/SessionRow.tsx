@@ -1,4 +1,4 @@
-import { Copy, Pause, CheckCircle2, Play } from 'lucide-react';
+import { Copy, Pause, CheckCircle2, Play, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { patchSession, type SessionRow as SessionT } from '@/lib/api';
@@ -9,6 +9,7 @@ import { useState } from 'react';
 type Props = {
     session: SessionT;
     onChanged: () => void;
+    dismissable?: boolean;
 };
 
 const accountVariant = (label: string | undefined): 'personal' | 'savvior' | 'muted' => {
@@ -19,7 +20,7 @@ const accountVariant = (label: string | undefined): 'personal' | 'savvior' | 'mu
 
 const statusVariant = (s: SessionT['status']): 'active' | 'paused' | 'done' => s;
 
-export function SessionRow({ session, onChanged }: Props) {
+export function SessionRow({ session, onChanged, dismissable = false }: Props) {
     const [busy, setBusy] = useState(false);
 
     const copyResume = async () => {
@@ -30,6 +31,16 @@ export function SessionRow({ session, onChanged }: Props) {
         setBusy(true);
         try {
             await patchSession(session.guid, { status });
+            onChanged();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const dismiss = async () => {
+        setBusy(true);
+        try {
+            await patchSession(session.guid, { dismissed: true });
             onChanged();
         } finally {
             setBusy(false);
@@ -76,6 +87,11 @@ export function SessionRow({ session, onChanged }: Props) {
                         {session.status !== 'active' && (
                             <Button size="xs" variant="ghost" disabled={busy} onClick={() => setStatus('active')} title="Mark active">
                                 <Play className="h-3.5 w-3.5" />
+                            </Button>
+                        )}
+                        {dismissable && (
+                            <Button size="xs" variant="ghost" disabled={busy} onClick={dismiss} title="Dismiss this session">
+                                <X className="h-3.5 w-3.5" />
                             </Button>
                         )}
                     </div>
