@@ -1,55 +1,55 @@
-# Command Center
+# Command Center -- Claude Code Notes
 
-Workspace and session dashboard for multi-project development with Claude Code.
+Laravel 13 + React 19 dashboard that surfaces Claude Code sessions across one or more Claude accounts.
 
-## Setup
+## Architecture rules
 
-1. Copy `database/seed.example.php` to `database/seed.php` and add your projects/workspaces
-2. Run `php database/seed.php` to initialize the SQLite database
-3. Set up an Apache/Nginx vhost pointing to `public/`
-4. Add your `.test` domain to your hosts file
+- **Service layer first.** All business logic lives in `app/Services/*`; controllers/commands are thin shells that delegate. Tests live in `tests/Feature/` and `tests/Unit/` and must pass before shipping.
+- **No auth.** Localhost dev tool, single user. Don't add middleware that requires it.
+- **Cross-platform.** Anything touching disk paths must work for both `/var/www/...` and `C:\wamp\www\...`. Use `WorkspacePathEncoder` and `DIRECTORY_SEPARATOR` rather than hardcoding slashes.
+- **Apache may run as a different user.** Read user-profile paths from `.env` (`COMMANDCENTER_HOME_ROOT`), never from `$HOME`/`$USERPROFILE` alone -- those are blank when Apache runs as `LocalSystem` on Windows. The `ClaudeAccountDiscovery::homeRoot()` helper has the right precedence.
+- **Tests use raw env vars** (`putenv`) which Laravel's `env()` does not see. Services that read env values must use `getenv()` / `$_ENV` / `$_SERVER` directly (see the `rawEnv()` helper in `ClaudeAccountDiscovery`).
 
-## Architecture
-
-- `public/index.php` -- Dashboard UI (polls API every 5s)
-- `public/api.php` -- JSON API for CRUD operations
-- `src/Database.php` -- SQLite data layer with git info discovery
-- `bin/cc-register` -- CLI tool for agents to register/label sessions
-- `database/schema.sql` -- Database schema
-
-## Session Registration
-
-From any workspace, agents can self-register:
+## Useful commands
 
 ```bash
-/path/to/commandcenter/bin/cc-register --workspace /var/www/myproject --guid <SESSION_GUID> --label "PROJECT | task description"
+php artisan cc:project:add NAME
+php artisan cc:workspace:add PROJECT 'absolute/path'
+php artisan cc:discover                    # refresh accounts + sessions
+php artisan cc:register --label "..."      # mark current session active+labeled
+php artisan test                           # full PHPUnit suite
+npm run build                              # production bundle (public/build)
+npm run dev                                # vite dev server with HMR
+composer dev                               # everything at once (vite + serve + queue + pail)
 ```
 
-GUID and workspace auto-detect from cwd when omitted:
+## Where Claude session data lives
 
-```bash
-/path/to/commandcenter/bin/cc-register --label "PROJECT | task description"
+```
+$COMMANDCENTER_HOME_ROOT/
+  .claude/                       # personal Max account (default)
+    projects/
+      C--wamp-www-tmo-tools3/    # Windows path encoding
+        <guid>.jsonl
+        <guid>.jsonl
+  .claude-savvior/               # named savvior account
+    projects/
+      ...
 ```
 
-The dashboard provides one-click copy buttons for resume and label commands.
+The encoded directory name is produced by `WorkspacePathEncoder::encode()` -- every `/`, `\`, and `:` becomes a `-`.
 
-## Universal Self-Registration Prompt
+## Adding a new feature
 
-Paste this block into any project's CLAUDE.md to enable self-registration. Replace the path and project name:
+1. Write a service in `app/Services/` (pure, dependency-injected).
+2. Cover it with a feature test that uses a fake `$HOME` under `sys_get_temp_dir()` (see `AccountDiscoveryTest::setUp`).
+3. Wire an artisan command and/or API route on top.
+4. Add UI components under `resources/js/components/` and consume the existing `lib/api.ts` helpers.
+5. `php artisan test && npm run build`.
 
-```markdown
-## Session Tracking
+## Things to avoid
 
-When you start working, register this session with Command Center. Do not read or investigate the command center project — just run this command exactly:
-
-    /var/www/commandcenter/bin/cc-register --label "PROJECTNAME | brief task description"
-
-Replace PROJECTNAME with this project's name. The description should be 3-5 words summarizing what we are working on. GUID and workspace are auto-detected from your working directory.
-```
-
-## Local Overrides
-
-- `CLAUDE.local.md` -- PC-specific project instructions (gitignored)
-- `database/seed.php` -- Your project/workspace layout (gitignored)
-- `database/*.db` -- Your session data (gitignored)
-- `knowledge/` -- Your ops procedures (gitignored)
+- Don't add a `users` table or auth middleware -- this is single-user.
+- Don't import Bootstrap, jQuery, or any non-Tailwind styling.
+- Don't move business logic into Eloquent models or controllers -- keep them thin.
+- Don't fork the encoded-path format from what Claude Code uses on disk; keep `WorkspacePathEncoder` as the single source of truth.
