@@ -12,8 +12,33 @@ Laravel 13 + React 19 + Tailwind 4 + shadcn-style components on top of SQLite.
 
 ## Install
 
+### Via Packagist (once submitted)
+
 ```bash
 composer create-project bookbreakdown/commandcenter commandcenter
+```
+
+### Without Packagist
+
+Add the VCS repository to your global or project `composer.json`:
+
+```json
+{
+    "repositories": [
+        { "type": "vcs", "url": "https://github.com/bookbreakdown/commandcenter" }
+    ]
+}
+```
+
+Then:
+
+```bash
+composer create-project bookbreakdown/commandcenter commandcenter
+```
+
+### Setup
+
+```bash
 cd commandcenter
 cp .env.example .env
 # edit .env -- set COMMANDCENTER_HOME and COMMANDCENTER_HOME_ROOT
