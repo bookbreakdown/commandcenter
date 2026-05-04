@@ -3,6 +3,8 @@ import { RefreshCw, Layers, ClipboardCopy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProjectCard } from '@/components/ProjectCard';
+import { OrphanGroupCard } from '@/components/OrphanGroupCard';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchDashboard, type DashboardPayload } from '@/lib/api';
 import { loadExpanded, saveExpanded } from '@/lib/collapse';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -14,6 +16,7 @@ export function Dashboard() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [expanded, setExpanded] = useState<Set<number>>(() => loadExpanded());
+    const [orphanExpanded, setOrphanExpanded] = useState<Set<string>>(new Set());
     const [copied, setCopied] = useState(false);
 
     const load = useCallback(async () => {
@@ -77,6 +80,15 @@ export function Dashboard() {
         return n;
     }, [data]);
 
+    const toggleOrphan = useCallback((cwd: string) => {
+        setOrphanExpanded((prev) => {
+            const next = new Set(prev);
+            if (next.has(cwd)) next.delete(cwd);
+            else next.add(cwd);
+            return next;
+        });
+    }, []);
+
     return (
         <div className="mx-auto max-w-6xl px-6 py-6">
             <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -136,27 +148,27 @@ export function Dashboard() {
                     )}
 
                     {data.orphans.length > 0 && (
-                        <section>
-                            <h2 className="mb-2 text-sm font-medium text-zinc-600">Orphan sessions</h2>
-                            <div className="rounded-md border border-zinc-200 bg-white">
-                                <ul className="divide-y divide-zinc-100">
-                                    {data.orphans.map((s) => (
-                                        <li key={s.id} className="flex flex-col gap-0.5 px-3 py-2 text-sm">
-                                            <div className="flex items-center gap-3">
-                                                <Badge variant={s.account?.label === 'savvior' ? 'savvior' : 'personal'}>
-                                                    {s.account?.label?.toUpperCase() ?? 'UNKNOWN'}
-                                                </Badge>
-                                                <span className="font-mono text-xs text-zinc-500">{s.guid_short}</span>
-                                                <span className="text-zinc-700">{s.label ?? <em className="text-zinc-400">unlabeled</em>}</span>
-                                            </div>
-                                            {!s.label && s.first_user_prompt && (
-                                                <div className="pl-1 text-xs text-zinc-500">{s.first_user_prompt}</div>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span>Orphan sessions</span>
+                                    <span className="text-xs font-normal text-zinc-400">
+                                        {data.orphans.length} origin{data.orphans.length === 1 ? '' : 's'}
+                                    </span>
+                                </CardTitle>
+                            </CardHeader>
+                            <div>
+                                {data.orphans.map((g) => (
+                                    <OrphanGroupCard
+                                        key={g.cwd}
+                                        group={g}
+                                        expanded={orphanExpanded.has(g.cwd)}
+                                        onToggle={() => toggleOrphan(g.cwd)}
+                                        onChanged={load}
+                                    />
+                                ))}
                             </div>
-                        </section>
+                        </Card>
                     )}
                 </div>
             )}

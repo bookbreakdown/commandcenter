@@ -92,3 +92,23 @@ export function SessionRow({ session, onChanged }: Props) {
         </>
     );
 }
+
+/**
+ * Compact one-line peek used inside a collapsed workspace header so the most
+ * recent session is visible without expanding. No actions, no preview row.
+ */
+export function SessionPeek({ session }: { session: SessionT }) {
+    return (
+        <div className="flex items-center gap-2 truncate text-xs">
+            <Badge variant={accountVariant(session.account?.label)}>
+                {session.account?.label?.toUpperCase() ?? 'UNKNOWN'}
+            </Badge>
+            <Badge variant={statusVariant(session.status)}>{session.status}</Badge>
+            <span className="font-mono text-zinc-500">{session.guid_short}</span>
+            <span className="truncate text-zinc-700">
+                {session.label ?? <em className="text-zinc-400">{session.first_user_prompt ?? 'unlabeled'}</em>}
+            </span>
+            <span className="ml-auto whitespace-nowrap text-zinc-400">{relativeTime(session.last_active_at)}</span>
+        </div>
+    );
+}

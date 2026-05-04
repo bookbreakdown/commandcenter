@@ -82,33 +82,40 @@ class ClaudeSessionDiscovery
             $session->registered = false;
         }
 
-        // Cache the first user prompt the first time we see a file. Re-extract
-        // when the file grows or the column is empty (cheap recovery if a row
-        // predates this feature).
+        // Re-extract derived fields when the file grows or they're empty
+        // (cheap recovery for rows that predate the feature).
         $shouldExtract = empty($session->first_user_prompt)
+            || empty($session->discovered_cwd)
             || $session->jsonl_size_bytes !== $size;
         if ($shouldExtract) {
-            $session->first_user_prompt = $this->extractFirstUserPrompt($jsonlPath);
+            [$prompt, $cwd] = $this->extractFromJsonl($jsonlPath);
+            if ($prompt !== null) $session->first_user_prompt = $prompt;
+            if ($cwd !== null) $session->discovered_cwd = $cwd;
         }
 
         return $session->save();
     }
 
     /**
-     * Read the JSONL line-by-line until the first message that is a plain
-     * human prompt (type=user, role=user, content is a string -- this skips
-     * system-injected tool-result messages which use an array). Truncates to
-     * 280 chars so the column stays tweet-sized for the dashboard preview.
+     * Single-pass scan: pull the first plain-text user prompt AND the cwd
+     * recorded on user messages. The cwd is the original workspace path the
+     * session was started in -- valuable for orphan rows whose encoded
+     * directory name isn't reversible.
+     *
+     * @return array{0:?string,1:?string}  [first_user_prompt, discovered_cwd]
      */
-    private function extractFirstUserPrompt(string $jsonlPath): ?string
+    private function extractFromJsonl(string $jsonlPath): array
     {
         $fh = @fopen($jsonlPath, 'r');
-        if (!$fh) return null;
+        if (!$fh) return [null, null];
+
+        $prompt = null;
+        $cwd = null;
 
         try {
             $linesScanned = 0;
             while (($line = fgets($fh)) !== false) {
-                if (++$linesScanned > 200) break; // first prompt is always near the top
+                if (++$linesScanned > 200) break;
                 $line = trim($line);
                 if ($line === '' || $line[0] !== '{') continue;
 
@@ -116,15 +123,23 @@ class ClaudeSessionDiscovery
                 if (!is_array($obj)) continue;
                 if (($obj['type'] ?? null) !== 'user') continue;
 
-                $content = $obj['message']['content'] ?? null;
-                if (!is_string($content) || $content === '') continue;
+                if ($cwd === null && !empty($obj['cwd']) && is_string($obj['cwd'])) {
+                    $cwd = $obj['cwd'];
+                }
 
-                $clean = trim(preg_replace('/\s+/', ' ', $content) ?? '');
-                if ($clean === '') continue;
+                if ($prompt === null) {
+                    $content = $obj['message']['content'] ?? null;
+                    if (is_string($content) && $content !== '') {
+                        $clean = trim(preg_replace('/\s+/', ' ', $content) ?? '');
+                        if ($clean !== '') {
+                            $prompt = mb_substr($clean, 0, 280);
+                        }
+                    }
+                }
 
-                return mb_substr($clean, 0, 280);
+                if ($prompt !== null && $cwd !== null) break;
             }
-            return null;
+            return [$prompt, $cwd];
         } finally {
             fclose($fh);
         }

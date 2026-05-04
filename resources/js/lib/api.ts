@@ -12,11 +12,19 @@ export type SessionRow = {
     account: { id: number; label: string; is_default: boolean } | null;
     label: string | null;
     first_user_prompt: string | null;
+    discovered_cwd: string | null;
     status: 'active' | 'paused' | 'done';
     jsonl_size_kb: number | null;
     jsonl_mtime: string | null;
     last_active_at: string | null;
     registered: boolean;
+};
+
+export type OrphanGroup = {
+    cwd: string;
+    source: 'cwd' | 'encoded' | 'unknown';
+    sessions: SessionRow[];
+    latest_at: string | null;
 };
 
 export type WorkspaceRow = {
@@ -33,7 +41,7 @@ export type ProjectNode = {
 
 export type DashboardPayload = {
     projects: ProjectNode[];
-    orphans: SessionRow[];
+    orphans: OrphanGroup[];
     accounts: Account[];
     register_prompt: string;
     commandcenter_home: string;

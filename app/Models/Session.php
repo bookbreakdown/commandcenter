@@ -17,6 +17,7 @@ class Session extends Model
         'first_user_prompt',
         'status',
         'jsonl_path',
+        'discovered_cwd',
         'jsonl_size_bytes',
         'jsonl_mtime',
         'registered',
