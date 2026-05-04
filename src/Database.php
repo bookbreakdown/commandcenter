@@ -3,6 +3,65 @@
 class Database
 {
     private static ?PDO $pdo = null;
+    private static ?array $envCache = null;
+
+    /**
+     * Read .env from the repo root once per request. Apache on Windows runs as
+     * a service (often SYSTEM) and won't see user-level env vars like HOME or
+     * CLAUDE_HOME, so the .env file is the only reliable place to record paths
+     * to user-profile directories such as ~/.claude or ~/.claude-savvior.
+     */
+    private static function envValue(string $key): ?string
+    {
+        if (self::$envCache === null) {
+            self::$envCache = [];
+            $envFile = __DIR__ . '/../.env';
+            if (is_file($envFile)) {
+                foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+                    $line = trim($line);
+                    if ($line === '' || $line[0] === '#' || !str_contains($line, '=')) continue;
+                    [$k, $v] = explode('=', $line, 2);
+                    self::$envCache[trim($k)] = trim($v);
+                }
+            }
+        }
+        if (isset(self::$envCache[$key]) && self::$envCache[$key] !== '') {
+            return self::$envCache[$key];
+        }
+        $shellVal = getenv($key);
+        return ($shellVal !== false && $shellVal !== '') ? $shellVal : null;
+    }
+
+    /**
+     * Resolve the parent dir of <whatever>/projects/<encoded-cwd>/*.jsonl.
+     * Search order: CLAUDE_PROJECTS_DIR (full path) → CLAUDE_HOME/projects →
+     * $HOME/.claude/projects → $USERPROFILE/.claude/projects.
+     */
+    public static function claudeProjectsDir(): ?string
+    {
+        $explicit = self::envValue('CLAUDE_PROJECTS_DIR');
+        if ($explicit) return $explicit;
+
+        $claudeHome = self::envValue('CLAUDE_HOME');
+        if ($claudeHome) {
+            return rtrim($claudeHome, '/\\') . DIRECTORY_SEPARATOR . 'projects';
+        }
+
+        $home = self::envValue('HOME') ?: self::envValue('USERPROFILE');
+        if (!$home) return null;
+        return $home . DIRECTORY_SEPARATOR . '.claude' . DIRECTORY_SEPARATOR . 'projects';
+    }
+
+    /**
+     * Encode a workspace path the same way Claude Code does on disk:
+     * path separators (/, \) and colons all become dashes.
+     *   C:\wamp\www\tmo-tools3 -> C--wamp-www-tmo-tools3
+     *   /var/www/myproject     -> -var-www-myproject
+     */
+    public static function encodeWorkspacePath(string $path): string
+    {
+        return str_replace(['/', '\\', ':'], '-', $path);
+    }
 
     public static function connect(): PDO
     {
@@ -83,9 +142,11 @@ class Database
 
     public static function discoverSessions(string $workspacePath, int $workspaceId, int $limit = 5): array
     {
-        $claudeDir = getenv('HOME') ?: '/home/' . get_current_user();
-        $encoded = str_replace('/', '-', $workspacePath);
-        $projectDir = $claudeDir . '/.claude/projects/' . $encoded;
+        $projectsDir = self::claudeProjectsDir();
+        if (!$projectsDir) return [];
+
+        $encoded = self::encodeWorkspacePath($workspacePath);
+        $projectDir = rtrim($projectsDir, '/\\') . DIRECTORY_SEPARATOR . $encoded;
 
         if (!is_dir($projectDir)) return [];
 

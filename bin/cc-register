@@ -20,16 +20,19 @@ $status = $opts['status'] ?? null;
 
 if (!$guid) {
     $cwd = $workspace ?: getcwd();
-    $home = getenv('HOME') ?: '/home/' . get_current_user();
-    $encoded = str_replace('/', '-', $cwd);
-    $projectDir = $home . '/.claude/projects/' . $encoded;
+    $projectsDir = Database::claudeProjectsDir();
 
-    if (is_dir($projectDir)) {
-        $files = glob($projectDir . '/*.jsonl');
-        if ($files) {
-            usort($files, fn($a, $b) => filemtime($b) - filemtime($a));
-            $guid = basename($files[0], '.jsonl');
-            fwrite(STDERR, "Auto-detected GUID: $guid\n");
+    if ($projectsDir) {
+        $encoded = Database::encodeWorkspacePath($cwd);
+        $projectDir = rtrim($projectsDir, '/\\') . DIRECTORY_SEPARATOR . $encoded;
+
+        if (is_dir($projectDir)) {
+            $files = glob($projectDir . '/*.jsonl');
+            if ($files) {
+                usort($files, fn($a, $b) => filemtime($b) - filemtime($a));
+                $guid = basename($files[0], '.jsonl');
+                fwrite(STDERR, "Auto-detected GUID: $guid\n");
+            }
         }
     }
 
