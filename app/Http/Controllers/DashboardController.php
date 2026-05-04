@@ -26,15 +26,15 @@ class DashboardController extends Controller
     }
 
     /**
-     * The "paste this into any chat" block. Resolves COMMANDCENTER_HOME so the
-     * absolute path to artisan is in the command -- the agent can run it
-     * without grepping the project for paths first.
+     * The "paste this into any chat" block. Resolves COMMANDCENTER_HOME so
+     * the absolute path to artisan is in the command, and passes --workspace
+     * explicitly so the registrar still sees the *original* cwd. (cd-then-php
+     * would clobber getcwd(), and PowerShell doesn't cd at all -- using
+     * --workspace makes both shells behave identically.)
      */
     private function buildRegisterPrompt(): string
     {
         $home = env('COMMANDCENTER_HOME') ?: getenv('COMMANDCENTER_HOME') ?: base_path();
-        // Normalize backslashes for both shells in the rendered block; the bash
-        // form quotes the path so backslashes are literal regardless.
         return <<<MARKDOWN
         ## Session Tracking
 
@@ -42,13 +42,13 @@ class DashboardController extends Controller
         Do NOT investigate the commandcenter project, do NOT cd into it, and do NOT read its files. Just run the command.
 
         - bash / zsh:
-              ( cd "{$home}" && php artisan cc:register --label "PROJECTNAME | brief task description" )
+              php "{$home}/artisan" cc:register --workspace "\$PWD" --label "PROJECTNAME | brief task description"
 
         - PowerShell:
-              & php "{$home}\\artisan" cc:register --label "PROJECTNAME | brief task description"
+              & php "{$home}\\artisan" cc:register --workspace "\$PWD" --label "PROJECTNAME | brief task description"
 
         Replace PROJECTNAME with this project's name. The description should be 3-5 words summarizing what we are working on.
-        GUID, account, and workspace are auto-detected from your current working directory.
+        GUID and account are auto-detected from the workspace path.
         MARKDOWN;
     }
 

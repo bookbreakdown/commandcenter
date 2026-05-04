@@ -43,7 +43,7 @@ class RegisterCommand extends Command
         $accountDiscovery->syncToDatabase();
 
         $workspacePath = $this->option('workspace') ?: getcwd();
-        $workspace = Workspace::where('path', $workspacePath)->first();
+        $workspace = $this->findWorkspace($workspacePath);
         if (!$workspace) {
             $this->error("Workspace not registered: {$workspacePath}");
             $this->line('Run cc:workspace:add <project> <path> first.');
@@ -83,6 +83,31 @@ class RegisterCommand extends Command
             $session->label ?? '(none)',
         ));
         return self::SUCCESS;
+    }
+
+    /**
+     * Look up a workspace whose stored path matches the given cwd, regardless
+     * of slash direction. Git Bash on Windows reports $PWD with forward
+     * slashes (C:/wamp/...), but cc:workspace:add typically stored the path
+     * with backslashes (C:\wamp\...). Try the input as-is, then swap separators
+     * both ways before giving up.
+     */
+    private function findWorkspace(string $path): ?Workspace
+    {
+        $candidates = array_unique([
+            $path,
+            str_replace('/', '\\', $path),
+            str_replace('\\', '/', $path),
+            rtrim($path, "/\\"),
+            rtrim(str_replace('/', '\\', $path), "/\\"),
+            rtrim(str_replace('\\', '/', $path), "/\\"),
+        ]);
+
+        foreach ($candidates as $c) {
+            $ws = Workspace::where('path', $c)->first();
+            if ($ws) return $ws;
+        }
+        return null;
     }
 
     /**
