@@ -24,7 +24,10 @@ export function SessionRow({ session, onChanged, dismissable = false }: Props) {
     const [busy, setBusy] = useState(false);
 
     const copyResume = async () => {
-        await copyToClipboard(`claude --resume ${session.guid}`);
+        // Include --dangerously-skip-permissions so the resumed session lands
+        // in the same permission mode it ran in originally (this user's
+        // workflow always runs Claude that way).
+        await copyToClipboard(`claude --dangerously-skip-permissions --resume ${session.guid}`);
     };
 
     const setStatus = async (status: SessionT['status']) => {

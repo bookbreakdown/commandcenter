@@ -35,7 +35,13 @@ class DashboardController extends Controller
      */
     private function buildRegisterPrompt(): string
     {
-        $home = env('COMMANDCENTER_HOME') ?: getenv('COMMANDCENTER_HOME') ?: base_path();
+        $rawHome = env('COMMANDCENTER_HOME') ?: getenv('COMMANDCENTER_HOME') ?: base_path();
+        // Normalize slashes per shell so the rendered prompt looks native:
+        // bash uses forward slashes (PHP accepts them on Windows too),
+        // PowerShell uses backslashes.
+        $bashHome = str_replace('\\', '/', $rawHome);
+        $psHome   = str_replace('/', '\\', $rawHome);
+
         return <<<MARKDOWN
         ## Session Tracking
 
@@ -43,10 +49,10 @@ class DashboardController extends Controller
         Do NOT investigate the commandcenter project, do NOT cd into it, and do NOT read its files. Just run the command.
 
         - bash / zsh:
-              php "{$home}/artisan" cc:register --workspace "\$PWD" --label "PROJECTNAME | brief task description"
+              php "{$bashHome}/artisan" cc:register --workspace "\$PWD" --label "PROJECTNAME | brief task description"
 
         - PowerShell:
-              & php "{$home}\\artisan" cc:register --workspace "\$PWD" --label "PROJECTNAME | brief task description"
+              & php "{$psHome}\\artisan" cc:register --workspace "\$PWD" --label "PROJECTNAME | brief task description"
 
         Replace PROJECTNAME with this project's name. The description should be 3-5 words summarizing what we are working on.
         GUID and account are auto-detected from the workspace path.
