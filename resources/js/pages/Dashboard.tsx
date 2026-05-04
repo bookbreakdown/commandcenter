@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProjectCard } from '@/components/ProjectCard';
 import { fetchDashboard, type DashboardPayload } from '@/lib/api';
 import { loadExpanded, saveExpanded } from '@/lib/collapse';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const POLL_MS = 5000;
 
@@ -60,9 +61,13 @@ export function Dashboard() {
 
     const copyRegisterPrompt = useCallback(async () => {
         if (!data?.register_prompt) return;
-        await navigator.clipboard.writeText(data.register_prompt);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2000);
+        const ok = await copyToClipboard(data.register_prompt);
+        if (ok) {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+        } else {
+            setError('Copy failed -- select the prompt manually.');
+        }
     }, [data]);
 
     const totalSessions = useMemo(() => {

@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { patchSession, type SessionRow as SessionT } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
+import { copyToClipboard } from '@/lib/clipboard';
 import { useState } from 'react';
 
 type Props = {
@@ -22,7 +23,7 @@ export function SessionRow({ session, onChanged }: Props) {
     const [busy, setBusy] = useState(false);
 
     const copyResume = async () => {
-        await navigator.clipboard.writeText(`claude --resume ${session.guid}`);
+        await copyToClipboard(`claude --resume ${session.guid}`);
     };
 
     const setStatus = async (status: SessionT['status']) => {
