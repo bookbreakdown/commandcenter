@@ -3,20 +3,37 @@
 namespace App\Http\Controllers;
 
 use App\Models\Session;
+use App\Services\ClaudeAccountDiscovery;
+use App\Services\ClaudeSessionDiscovery;
 use App\Services\DashboardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class DashboardController extends Controller
 {
     public function __construct(
         private readonly DashboardService $dashboard,
+        private readonly ClaudeAccountDiscovery $accountDiscovery,
+        private readonly ClaudeSessionDiscovery $sessionDiscovery,
     ) {}
 
     public function index(): JsonResponse
     {
+        // Refresh = rescan disk so newly written .jsonl files appear without
+        // a manual `php artisan cc:discover`. Discovery failure must not
+        // break the dashboard fetch -- log and serve whatever the DB has.
+        try {
+            $this->accountDiscovery->syncToDatabase();
+            $this->sessionDiscovery->syncToDatabase();
+        } catch (\Throwable $e) {
+            Log::warning('Dashboard refresh: discovery failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'projects'             => $this->dashboard->tree(),
             'orphans'              => $this->dashboard->orphanSessions(),
