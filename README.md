@@ -38,14 +38,18 @@ composer create-project bookbreakdown/commandcenter commandcenter
 
 ### Setup
 
+`composer create-project` (and any subsequent `composer install`) will:
+
+- copy `.env.example` to `.env`
+- generate `APP_KEY`
+- create the SQLite file and run migrations
+- run `npm install` and `npm run build` to produce `public/build/` (skipped with a notice if npm is not on PATH; install Node 18+ if you need the dashboard UI)
+
+After that, just edit `.env` for your machine:
+
 ```bash
 cd commandcenter
-cp .env.example .env
-# edit .env -- set COMMANDCENTER_HOME and COMMANDCENTER_HOME_ROOT
-php artisan key:generate
-php artisan migrate --force
-npm install --no-audit --no-fund
-npm run build
+# edit .env -- set COMMANDCENTER_HOME, COMMANDCENTER_HOME_ROOT, optional CLAUDE_EXECUTABLES
 ```
 
 Then point an Apache vhost at `public/` and add `commandcenter.test` (or whatever you call it) to your hosts file.
